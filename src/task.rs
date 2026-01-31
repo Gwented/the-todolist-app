@@ -1,4 +1,4 @@
-use std::{fmt::Display, path};
+use std::fmt::Display;
 
 use chrono::{DateTime, Local, Utc};
 
@@ -55,25 +55,30 @@ impl Task {
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.last_edit {
-            Some(time) => {
-                let time = time.with_timezone(&Local);
+            Some(edit_time) => {
+                let creation_date = self.creation_date.with_timezone(&Local);
+                let edit_date = edit_time.with_timezone(&Local);
+
+                let d_fmt = "%m/%d/%Y %H:%M:%S";
+
                 write!(
                     // No, no editing check. Get out. GET OUT. FIX: Fine.
                     f,
                     "[Created: {}] [Last edit: {}]\n(Priority={}) Title: {}\nContent: \"{}\"\n",
-                    self.creation_date,
-                    time,
+                    creation_date.format(d_fmt),
+                    edit_date.format(d_fmt),
                     self.priority,
                     self.title,
                     self.content
                 )
             }
             None => {
+                let creation_date = self.creation_date.with_timezone(&Local);
                 write!(
                     // No, no editing check. Get out. GET OUT. FIX: Fine.
                     f,
-                    "[Created: {}] [Last edit: Unedited]\n(Priority={}) Title: {}\nContent: \"{}\"\n",
-                    self.creation_date,
+                    "[Created: {}]\n(Priority={}) Title: {}\nContent: \"{}\"\n",
+                    creation_date.format("%m/%d/%Y %H:%M:%S"),
                     self.priority,
                     self.title,
                     self.content
@@ -113,6 +118,7 @@ impl<'a> TryFrom<&'a str> for Priority {
                 //NO
                 return Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(s.to_string()),
+                    branch: crate::error::Branch::NewTask,
                     help: None,
                 }));
             }
@@ -131,6 +137,7 @@ impl<'a> TryFrom<&'a String> for Priority {
             s => {
                 return Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(s.to_string()),
+                    branch: crate::error::Branch::NewTask,
                     help: None,
                 }));
             }

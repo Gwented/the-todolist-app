@@ -1,3 +1,4 @@
+//FIX: WHY. Ok that's it.
 use std::{fmt::Display, io};
 
 // Not hard-coded please keep walking
@@ -5,9 +6,21 @@ use std::{fmt::Display, io};
 // const RESET: &'static str = "\x1b[0m";
 const ERR: &'static str = "\x1b[31mError\x1b[0m";
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum Branch {
+    Main,
+    NewTask,
+    EditTask,
+    ShowTask,
+    SaveTask,
+    RemoveTask,
+}
+
 #[derive(Debug)]
 pub struct ErrorContext {
     pub id: Option<String>,
+    pub branch: Branch,
+    // pub expected: Option<String>,
     pub help: Option<String>,
     // possible format metadata
 }

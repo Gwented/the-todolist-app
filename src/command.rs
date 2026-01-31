@@ -2,25 +2,26 @@ use chrono::Utc;
 
 use crate::{
     args::Options,
-    config::GlobalConfig,
-    error::{ErrorContext, TodoError},
-    storage,
+    error::{Branch, ErrorContext, TodoError},
+    iyo::{config::GlobalConfig, storage},
     task::{Priority, Task},
 };
 
 pub fn exec(global_cfg: &GlobalConfig, args: &Vec<String>) -> Result<(), TodoError> {
     match &args.get(0).map(|s| s.as_str()) {
-        Some("new") => new_task(global_cfg, &args[1..]), // [title] ""[content] -p[tier]
-        Some("edit") => edit_task(global_cfg, &args[1..]), // [title] -t[title] or -c [content] ""[content]
-        Some("show") => show_task(global_cfg, &args[1..]), // -a[default] -p[tier]
-        Some("rm") => remove_task(global_cfg, &args[1..]), // [title] or -a[all]
+        Some("new") | Some("n") => new_task(global_cfg, &args[1..]), // [title] ""[content] -p[tier]
+        Some("edit") | Some("e") => edit_task(global_cfg, &args[1..]), // [title] -t[title] or -c [content] ""[content]
+        Some("show") | Some("s") => show_task(global_cfg, &args[1..]), // -a[default] -p[tier]
+        Some("rm") => remove_task(global_cfg, &args[1..]),             // [title] or -a[all]
         // Some("undo") => new_task(&args[1..]), // Why is this here?
         Some(s) => Err(TodoError::InvalidSyntax(ErrorContext {
             id: Some(s.to_string()),
+            branch: Branch::Main,
             help: None,
         })),
         None => Err(TodoError::InvalidSyntax(ErrorContext {
             id: None,
+            branch: Branch::Main,
             help: None,
         })),
     }
@@ -34,6 +35,7 @@ fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError>
 
     let title = args.get(0).ok_or(TodoError::InvalidSyntax(ErrorContext {
         id: None,
+        branch: Branch::NewTask,
         help: None,
     }))?;
 
@@ -49,6 +51,7 @@ fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError>
                 }
                 t => Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(t.to_string()),
+                    branch: Branch::NewTask,
                     help: None,
                 }))?,
             },
@@ -57,6 +60,7 @@ fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError>
                 if has_content == true {
                     Err(TodoError::InvalidSyntax(ErrorContext {
                         id: Some(arg.to_string()),
+                        branch: Branch::NewTask,
                         help: None,
                     }))?;
                 }
@@ -78,6 +82,7 @@ fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError>
 fn edit_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError> {
     let title = args.get(0).ok_or(TodoError::InvalidSyntax(ErrorContext {
         id: None,
+        branch: Branch::EditTask,
         help: None,
     }))?;
 
@@ -99,6 +104,7 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
                 //  FIXME: NOW I WANT UNIFIED ERROR HANDLING
                 t => Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(t.to_string()),
+                    branch: Branch::ShowTask,
                     help: None,
                 }))?,
             },
@@ -107,6 +113,7 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
                 if has_title == true {
                     Err(TodoError::InvalidSyntax(ErrorContext {
                         id: Some(arg.to_string()),
+                        branch: Branch::ShowTask,
                         help: None,
                     }))?;
                 }
@@ -129,6 +136,7 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
     let target = target.ok_or_else(|| {
         TodoError::InvalidSyntax(ErrorContext {
             id: None,
+            branch: Branch::ShowTask,
             help: None,
         })
     })?;
@@ -163,6 +171,7 @@ fn remove_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoErr
                 Options::All => all = true,
                 t => Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(t.to_string()),
+                    branch: Branch::RemoveTask,
                     help: None,
                 }))?,
             },
@@ -171,6 +180,7 @@ fn remove_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoErr
                 if has_title == true {
                     Err(TodoError::InvalidSyntax(ErrorContext {
                         id: Some(arg.to_string()),
+                        branch: Branch::RemoveTask,
                         help: None,
                     }))?;
                 }
@@ -191,6 +201,7 @@ fn remove_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoErr
     let target = target.ok_or_else(|| {
         TodoError::InvalidSyntax(ErrorContext {
             id: None,
+            branch: Branch::RemoveTask,
             help: None,
         })
     })?;
