@@ -1,34 +1,34 @@
 use std::{fmt::Display, io};
 
 // Not hard-coded please keep walking
-const RED: &'static str = "\x1b[31m";
-const RESET: &'static str = "\x1b[0m";
+// const RED: &'static str = "\x1b[31m";
+// const RESET: &'static str = "\x1b[0m";
 const ERR: &'static str = "\x1b[31mError\x1b[0m";
 
 #[derive(Debug)]
-pub struct ErrorContext<'a> {
-    pub id: Option<&'a str>,
+pub struct ErrorContext {
+    pub id: Option<String>,
     pub help: Option<String>,
     // possible format metadata
 }
 
+//FIX:TOKEN ENUM JUMPSCARE
+
 #[derive(Debug)]
-pub enum TodoError<'a> {
-    InvalidSyntax(ErrorContext<'a>),
-    TitleNotFound(&'a str),
-    TaskNotFound(&'a str),
+pub enum TodoError {
+    InvalidSyntax(ErrorContext),
+    TitleNotFound(String),
+    TaskNotFound(String),
     IO(io::ErrorKind),
 }
 
-impl From<io::Error> for TodoError<'_> {
+impl From<io::Error> for TodoError {
     fn from(e: std::io::Error) -> Self {
         TodoError::IO(e.kind())
     }
 }
 
-impl std::error::Error for TodoError<'_> {}
-
-impl Display for TodoError<'_> {
+impl Display for TodoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TodoError::InvalidSyntax(err_ctx) => {

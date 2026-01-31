@@ -1,8 +1,10 @@
-use std::fmt::Display;
+use std::{fmt::Display, path};
 
 use chrono::{DateTime, Local, Utc};
 
 use crate::error::{ErrorContext, TodoError};
+
+//FIX: FIX THE GOAL WHAT WAS THE GOAL OF THIS WHY ARE WE ACCOMMODATING WITH WINDOWS?
 
 #[derive(Debug)]
 pub struct Task {
@@ -91,25 +93,26 @@ pub enum Priority {
 impl Priority {
     pub fn to_u8(&self) -> u8 {
         match self {
-            Priority::High => 0,
-            Priority::Medium => 1,
-            Priority::Low => 2,
+            Priority::High => 1,
+            Priority::Medium => 2,
+            Priority::Low => 3,
         }
     }
 }
 
 impl<'a> TryFrom<&'a str> for Priority {
-    type Error = TodoError<'a>;
+    type Error = TodoError;
 
     fn try_from(val: &'a str) -> Result<Self, Self::Error> {
         match val {
-            "-t1" | "0" => Ok(Priority::High),
-            "-t2" | "1" => Ok(Priority::Medium),
-            "-t3" | "2" => Ok(Priority::High),
+            "1" => Ok(Priority::Low),
+            "2" => Ok(Priority::Medium),
+            "3" => Ok(Priority::High),
             s => {
                 //FIXME: Display help
+                //NO
                 return Err(TodoError::InvalidSyntax(ErrorContext {
-                    id: Some(s),
+                    id: Some(s.to_string()),
                     help: None,
                 }));
             }
@@ -118,16 +121,16 @@ impl<'a> TryFrom<&'a str> for Priority {
 }
 
 impl<'a> TryFrom<&'a String> for Priority {
-    type Error = TodoError<'a>;
+    type Error = TodoError;
 
     fn try_from(val: &'a String) -> Result<Self, Self::Error> {
         match val.as_str() {
-            "-t1" => Ok(Priority::High),
-            "-t2" => Ok(Priority::Medium),
-            "-t3" => Ok(Priority::High),
+            "1" => Ok(Priority::Low),
+            "2" => Ok(Priority::Medium),
+            "3" => Ok(Priority::High),
             s => {
                 return Err(TodoError::InvalidSyntax(ErrorContext {
-                    id: Some(s),
+                    id: Some(s.to_string()),
                     help: None,
                 }));
             }
@@ -138,9 +141,9 @@ impl<'a> TryFrom<&'a String> for Priority {
 impl From<u8> for Priority {
     fn from(val: u8) -> Self {
         match val {
-            0 => Priority::Low,
-            1 => Priority::Medium,
-            2 => Priority::High,
+            1 => Priority::Low,
+            2 => Priority::Medium,
+            3 => Priority::High,
             _ => unreachable!("CRITICAL ERROR: I haven't used Go yet."),
         }
     }
