@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use chrono::{DateTime, Local, Utc};
 
@@ -47,11 +47,16 @@ impl Task {
         &self.title
     }
 
+    pub fn set_title(&mut self, edit: String) {
+        self.title = edit;
+    }
+
     pub fn content(&self) -> &str {
         &self.content
     }
 }
 
+// Change to dedicated method instead of to_string for better composition
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.last_edit {
@@ -64,7 +69,7 @@ impl Display for Task {
                 write!(
                     // No, no editing check. Get out. GET OUT. FIX: Fine.
                     f,
-                    "[Created: {}] [Last edit: {}]\n(Priority={}) Title: {}\nContent: \"{}\"\n",
+                    "[Created: {}]\n[Last edit: {}]\nPriority={}\nTitle: {}\nContent: \"{}\"",
                     creation_date.format(d_fmt),
                     edit_date.format(d_fmt),
                     self.priority,
@@ -77,7 +82,7 @@ impl Display for Task {
                 write!(
                     // No, no editing check. Get out. GET OUT. FIX: Fine.
                     f,
-                    "[Created: {}]\n(Priority={}) Title: {}\nContent: \"{}\"\n",
+                    "[Created: {}]\nPriority={}\nTitle: {}\nContent: \"{}\"",
                     creation_date.format("%m/%d/%Y %H:%M:%S"),
                     self.priority,
                     self.title,
@@ -105,31 +110,28 @@ impl Priority {
     }
 }
 
-impl<'a> TryFrom<&'a str> for Priority {
-    type Error = TodoError;
+impl FromStr for Priority {
+    type Err = TodoError;
 
-    fn try_from(val: &'a str) -> Result<Self, Self::Error> {
-        match val {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
             "1" => Ok(Priority::Low),
             "2" => Ok(Priority::Medium),
             "3" => Ok(Priority::High),
             s => {
-                //FIXME: Display help
-                //NO
                 return Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(s.to_string()),
                     branch: crate::error::Branch::NewTask,
-                    help: None,
                 }));
             }
         }
     }
 }
 
-impl<'a> TryFrom<&'a String> for Priority {
+impl TryFrom<&String> for Priority {
     type Error = TodoError;
 
-    fn try_from(val: &'a String) -> Result<Self, Self::Error> {
+    fn try_from(val: &String) -> Result<Self, Self::Error> {
         match val.as_str() {
             "1" => Ok(Priority::Low),
             "2" => Ok(Priority::Medium),
@@ -138,7 +140,6 @@ impl<'a> TryFrom<&'a String> for Priority {
                 return Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(s.to_string()),
                     branch: crate::error::Branch::NewTask,
-                    help: None,
                 }));
             }
         }

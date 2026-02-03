@@ -29,7 +29,7 @@ impl From<&String> for Options {
             "-p1" => Options::Priority(Priority::Low),
             "-p2" => Options::Priority(Priority::Medium),
             "-p3" => Options::Priority(Priority::High),
-            "-a" => Options::All,
+            "-a" | "." => Options::All,
             val => Options::Illegal(val.to_string()),
         }
     }

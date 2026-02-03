@@ -1,7 +1,8 @@
 use std::{
     fs,
-    io::{BufRead, BufWriter, Write},
+    io::{self, BufRead, BufWriter, Write},
     path::Path,
+    str::FromStr,
 };
 
 use chrono::{DateTime, Utc};
@@ -14,22 +15,35 @@ use crate::{
 const UNIT_SEP: char = '\u{01E}';
 const RECORD_SEP: char = '\u{01F}';
 
+const TASK_FILE: &'static str = "tasks.txt";
+
+//More useful path names
+pub fn init_dir(dot_folder: &Path) -> Result<(), TodoError> {
+    let tasks_path = dot_folder.join(TASK_FILE);
+
+    fs::create_dir_all(dot_folder).or_else(|err| {
+        if err.kind() == io::ErrorKind::AlreadyExists {
+            dbg!("Cup a tea");
+            return Ok(());
+        } else {
+            return Err(TodoError::IO(err.kind()));
+        }
+    })?;
+
+    fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(&tasks_path)?;
+
+    println!("\x1b[32mCreated task directory.\x1b[0m");
+
+    Ok(())
+}
+
 pub fn load_all_tasks(path: &Path) -> Result<Vec<Task>, TodoError> {
     //FIX: THIS IS BAIT. YOU FELL FOR IT. Should this stay +rw or just +r?
-    let file_res = fs::File::open(path);
-    dbg!(path);
-
-    let stored_tasks = match file_res {
-        Ok(f) => f,
-        Err(err) => {
-            if err.kind() == std::io::ErrorKind::NotFound {
-                fs::File::create(path)?;
-                return Ok(Vec::new());
-            } else {
-                Err(err)
-            }
-        }?,
-    };
+    let stored_tasks = fs::File::open(path.join(TASK_FILE)).expect("[!] No directory created.");
+    // dbg!(path);
 
     let mut reader = std::io::BufReader::new(stored_tasks);
 
@@ -43,7 +57,7 @@ pub fn load_all_tasks(path: &Path) -> Result<Vec<Task>, TodoError> {
             .map(|b| str::from_utf8(b).expect("Invalid utf-8 while loading in 'load_tasks'."))
             .collect();
 
-        dbg!(&parts);
+        // dbg!(&parts);
 
         let creation_date = DateTime::parse_from_rfc3339(parts[0])
             .expect("Failed to parse 'creation_date'")
@@ -53,7 +67,7 @@ pub fn load_all_tasks(path: &Path) -> Result<Vec<Task>, TodoError> {
             .ok()
             .map(|e| e.to_utc());
 
-        let priority = Priority::try_from(parts[2])?;
+        let priority = Priority::from_str(parts[2])?;
 
         let title = parts[3].to_string();
 
@@ -79,7 +93,9 @@ pub fn load_all_tasks(path: &Path) -> Result<Vec<Task>, TodoError> {
 //FIX:TOKEN ENUM JUMPSCARE
 
 pub fn save_all_tasks(path: &Path, tasks: &Vec<Task>) -> Result<(), TodoError> {
-    let file = fs::OpenOptions::new().write(true).open(path)?;
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .open(path.join(TASK_FILE))?;
 
     //FIXME: I AM TAPE I HATE BEING TAPE GET RID OF ME AND MAKE A REAL FUNCTION
     if tasks.is_empty() {
@@ -107,13 +123,15 @@ pub fn save_all_tasks(path: &Path, tasks: &Vec<Task>) -> Result<(), TodoError> {
         write!(writer, "{}{}", task.content(), RECORD_SEP)?;
     }
 
-    dbg!(tasks);
-    dbg!("I broke out. I am free. (Double free)");
+    // dbg!(tasks);
+    // dbg!("I broke out. I am free. (Double free)");
     Ok(())
 }
 
 pub fn save_task(path: &Path, task: &Task) -> Result<(), TodoError> {
-    let file = fs::OpenOptions::new().read(true).append(true).open(path)?;
+    let file = fs::OpenOptions::new()
+        .append(true)
+        .open(path.join(TASK_FILE))?;
 
     let mut writer = BufWriter::new(file);
 
@@ -134,6 +152,15 @@ pub fn save_task(path: &Path, task: &Task) -> Result<(), TodoError> {
     write!(writer, "{}{}", task.title(), UNIT_SEP)?;
     write!(writer, "{}{}", task.content(), RECORD_SEP)?;
 
-    dbg!(task);
+    // dbg!(task);
+    Ok(())
+}
+
+pub fn remove_main(path: &Path) -> Result<(), TodoError> {
+    // fs::remove_file(path).map_err(|e| panic!("Should this exist? Err: {e}"))
+    fs::remove_dir_all(path).map_err(|e| TodoError::IO(e.kind()))?;
+
+    println!("Removed {}", path.to_str().expect("Ok that's enough"));
+
     Ok(())
 }

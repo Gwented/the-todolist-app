@@ -1,2 +1,5 @@
-# the-todolist-app
-You are a senior Rust developer, tasked with making the **FIRST** todo list app.
+### THE todo list app. 
+
+Testing OS interpolation, file IO, how cli tools work, how blob files work, and other stuff.
+
+$ git rm .

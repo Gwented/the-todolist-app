@@ -13,22 +13,21 @@ pub fn exec(global_cfg: &GlobalConfig, args: &Vec<String>) -> Result<(), TodoErr
         Some("edit") | Some("e") => edit_task(global_cfg, &args[1..]), // [title] -t[title] or -c [content] ""[content]
         Some("show") | Some("s") => show_task(global_cfg, &args[1..]), // -a[default] -p[tier]
         Some("rm") => remove_task(global_cfg, &args[1..]),             // [title] or -a[all]
+        Some("forget") => remove_root(global_cfg),
         // Some("undo") => new_task(&args[1..]), // Why is this here?
         Some(s) => Err(TodoError::InvalidSyntax(ErrorContext {
             id: Some(s.to_string()),
             branch: Branch::Main,
-            help: None,
         })),
         None => Err(TodoError::InvalidSyntax(ErrorContext {
             id: None,
             branch: Branch::Main,
-            help: None,
         })),
     }
 }
 
-//FIXME: THIS IS ALSO BAIT.
-
+//FIX: REMOVE BOOLEANS
+//no
 fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError> {
     let creation_date = Utc::now();
     let mut priority = Priority::Medium;
@@ -36,14 +35,13 @@ fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError>
     let title = args.get(0).ok_or(TodoError::InvalidSyntax(ErrorContext {
         id: None,
         branch: Branch::NewTask,
-        help: None,
     }))?;
 
     let mut content = String::new();
     let has_content = false;
 
     for arg in args.iter().skip(1) {
-        dbg!(&arg);
+        // dbg!(&arg);
         match arg {
             arg if arg.starts_with("-") || arg.starts_with("--") => match Options::from(arg) {
                 Options::Priority(p) => {
@@ -52,16 +50,15 @@ fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError>
                 t => Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(t.to_string()),
                     branch: Branch::NewTask,
-                    help: None,
                 }))?,
             },
             // arg if arg.starts_with("--") => {}
             arg => {
                 if has_content == true {
+                    println!("Has content twice?");
                     Err(TodoError::InvalidSyntax(ErrorContext {
                         id: Some(arg.to_string()),
                         branch: Branch::NewTask,
-                        help: None,
                     }))?;
                 }
                 content = arg.to_string();
@@ -69,25 +66,50 @@ fn new_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError>
         }
     }
 
-    dbg!(&content, &creation_date);
+    // dbg!(&content, &creation_date);
+    storage::init_dir(&global_cfg.file_path)?;
 
     let new_task = Task::new(creation_date, None, priority, title.to_string(), content);
-    dbg!(&new_task);
+    // dbg!(&new_task);
 
     storage::save_task(&global_cfg.file_path, &new_task)?;
+    println!("\x1b[32mSaved task.\x1b[0m");
 
     Ok(())
 }
 
+//FIX: Green Greem Green Green Green
+// const GREEN: &'static str = "\x1b[32m \x1b[0m";
+
 fn edit_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError> {
-    let title = args.get(0).ok_or(TodoError::InvalidSyntax(ErrorContext {
+    let target = args.get(0).ok_or(TodoError::InvalidSyntax(ErrorContext {
         id: None,
         branch: Branch::EditTask,
-        help: None,
     }))?;
 
     let mut all_tasks = storage::load_all_tasks(&global_cfg.file_path)?;
-    todo!()
+
+    //FIX: "use use"
+    let target = all_tasks
+        .iter_mut()
+        .position(|t| t.title() == target)
+        .ok_or(TodoError::InvalidSyntax(ErrorContext {
+            id: None,
+            branch: Branch::EditTask,
+        }))?;
+
+    let task = &mut all_tasks[target];
+
+    let edit = args.get(1).ok_or(TodoError::InvalidSyntax(ErrorContext {
+        id: None,
+        branch: Branch::EditTask,
+    }))?;
+
+    task.set_title(edit.to_string());
+
+    storage::save_all_tasks(&global_cfg.file_path, &all_tasks)?;
+
+    Ok(())
 }
 
 fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError> {
@@ -97,7 +119,7 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
     let mut target: Option<&str> = None;
 
     for arg in args.iter() {
-        dbg!(&arg);
+        // dbg!(&arg);
         match arg {
             arg if arg.starts_with("-") || arg.starts_with("--") => match Options::from(arg) {
                 Options::All => all = true,
@@ -105,7 +127,6 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
                 t => Err(TodoError::InvalidSyntax(ErrorContext {
                     id: Some(t.to_string()),
                     branch: Branch::ShowTask,
-                    help: None,
                 }))?,
             },
             // arg if arg.starts_with("--") => {}
@@ -114,7 +135,6 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
                     Err(TodoError::InvalidSyntax(ErrorContext {
                         id: Some(arg.to_string()),
                         branch: Branch::ShowTask,
-                        help: None,
                     }))?;
                 }
                 target = Some(arg);
@@ -124,20 +144,20 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
     }
 
     let all_tasks = storage::load_all_tasks(&global_cfg.file_path)?;
-    dbg!("loaded", all);
+    // dbg!("loaded", all);
 
     if all {
         for task in &all_tasks {
             println!("{task}");
-            return Ok(());
         }
+
+        return Ok(());
     }
 
     let target = target.ok_or_else(|| {
         TodoError::InvalidSyntax(ErrorContext {
             id: None,
             branch: Branch::ShowTask,
-            help: None,
         })
     })?;
 
@@ -146,8 +166,8 @@ fn show_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoError
     //     return Ok(());
     // }
 
-    //FIXME: Ok the boolean joke is gettting old just create the Config structs.
-    //Ok :C
+    //FIXME: Ok the booleans are gettting old just create the Config structs.
+    //no
     let index = all_tasks
         .iter()
         .position(|t| t.title() == target)
@@ -165,23 +185,23 @@ fn remove_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoErr
     let mut all = false;
 
     for arg in args.iter() {
-        dbg!(&arg);
+        // dbg!(&arg);
         match arg {
-            arg if arg.starts_with("-") || arg.starts_with("--") => match Options::from(arg) {
-                Options::All => all = true,
-                t => Err(TodoError::InvalidSyntax(ErrorContext {
-                    id: Some(t.to_string()),
-                    branch: Branch::RemoveTask,
-                    help: None,
-                }))?,
-            },
+            arg if arg.starts_with("-") || arg.starts_with("--") || arg.starts_with(".") => {
+                match Options::from(arg) {
+                    Options::All => all = true,
+                    t => Err(TodoError::InvalidSyntax(ErrorContext {
+                        id: Some(t.to_string()),
+                        branch: Branch::RemoveTask,
+                    }))?,
+                }
+            }
             // arg if arg.starts_with("--") => {}
             arg => {
                 if has_title == true {
                     Err(TodoError::InvalidSyntax(ErrorContext {
                         id: Some(arg.to_string()),
                         branch: Branch::RemoveTask,
-                        help: None,
                     }))?;
                 }
                 target = Some(arg);
@@ -195,6 +215,8 @@ fn remove_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoErr
     if all {
         all_tasks.clear();
         storage::save_all_tasks(&global_cfg.file_path, &all_tasks)?;
+
+        println!("\x1b[31mAll tasks removed.\x1b[0m");
         return Ok(());
     }
 
@@ -202,7 +224,6 @@ fn remove_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoErr
         TodoError::InvalidSyntax(ErrorContext {
             id: None,
             branch: Branch::RemoveTask,
-            help: None,
         })
     })?;
 
@@ -217,5 +238,12 @@ fn remove_task(global_cfg: &GlobalConfig, args: &[String]) -> Result<(), TodoErr
 
     storage::save_all_tasks(&global_cfg.file_path, &all_tasks)?;
 
+    println!("\x1b[31mRemoved task '{target}'.\x1b[0m");
+
     Ok(())
+}
+
+// JAVA
+fn remove_root(global_cfg: &GlobalConfig) -> Result<(), TodoError> {
+    storage::remove_main(&global_cfg.file_path)
 }

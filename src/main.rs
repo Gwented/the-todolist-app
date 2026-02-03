@@ -1,4 +1,4 @@
-use todol::{command, iyo::config::GlobalConfig};
+use todol::{command, error::TodoError, iyo::config::GlobalConfig};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -7,10 +7,13 @@ fn main() {
 
     match command::exec(&global_cfg, &args) {
         Ok(()) => (),
-        Err(err) => {
-            eprintln!("{err}");
-            std::process::exit(1);
-            //DID THIS MAKE A DIFFERENCE?
-        }
+        Err(err) => match err {
+            TodoError::InvalidSyntax(err_ctx) => {
+                eprintln!("{}", TodoError::InvalidSyntax(err_ctx));
+            }
+            // todol::error::TodoError::TitleNotFound(_) => todo!(),
+            // todol::error::TodoError::IO(error_kind) => todo!(),
+            e => eprintln!("{e}"),
+        },
     }
 }
